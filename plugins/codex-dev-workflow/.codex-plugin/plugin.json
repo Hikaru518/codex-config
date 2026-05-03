@@ -1,0 +1,34 @@
+{
+  "name": "codex-dev-workflow",
+  "version": "0.1.0",
+  "description": "Codex workflow package for design, technical planning, task dispatching, implementation, and review.",
+  "author": {
+    "name": "Peiguang Wang",
+    "url": "https://github.com/Hikaru518"
+  },
+  "homepage": "https://github.com/Hikaru518/opencode-config",
+  "repository": "https://github.com/Hikaru518/opencode-config",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "workflow",
+    "software-development"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Dev Workflow",
+    "shortDescription": "Design, plan, dispatch, implement, and review coding work.",
+    "longDescription": "A repo-local Codex workflow package migrated from an OpenCode multi-agent development workflow. It provides role-based skill entrypoints for product design, technical planning, task dispatching, single-task implementation, and quality review.",
+    "developerName": "Peiguang Wang",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$product-designer 帮我把这个想法整理成 design 文档。",
+      "$tech-designer 读取 design.md 并生成实施计划。",
+      "$task-dispatcher 按 tasks.json 执行任务。"
+    ]
+  }
+}
