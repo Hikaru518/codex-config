@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: codex-tech-design <path-to-design.md>" >&2
+  exit 2
+fi
+
+design_path="$1"
+
+codex "\$tech-designer
+
+读取：$design_path
+
+请按 \$tech-designer 执行，生成同一 plan 目录下的 implementation-plan.md、technical-design.md 和 tasks.json。"

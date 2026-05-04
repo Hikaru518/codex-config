@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: codex-dispatch <path-to-tasks.json-or-plan-dir>" >&2
+  exit 2
+fi
+
+input_path="$1"
+
+codex "\$task-dispatcher
+
+读取：$input_path
+
+请按 \$task-dispatcher 执行。按 tasks.json 顺序串行派发 developer custom subagent，维护 progress.md，并在需要创建 PR 前询问我。"

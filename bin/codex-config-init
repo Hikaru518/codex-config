@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMMAND_NAME="codex-config-init"
+
+usage() {
+  cat <<EOF
+Usage:
+  ${COMMAND_NAME} [--force] [target-dir]
+  ${COMMAND_NAME} --help
+
+Install repo-local Codex workflow skills into a target repository.
+
+Arguments:
+  target-dir   Target repository directory. Defaults to the current directory.
+
+Options:
+  --force      Replace matching managed skills and .codex/agents/developer.toml.
+  --help, -h   Show this help.
+
+Behavior:
+  - Copies .agents/skills into the target repository.
+  - Copies .codex/agents/developer.toml into the target repository.
+  - Does not create, modify, or merge AGENTS.md.
+  - Does not modify ~/.codex/config.toml or register any plugin marketplace.
+EOF
+}
+
+resolve_script_dir() {
+  local source_path="${BASH_SOURCE[0]}"
+
+  while [[ -L "${source_path}" ]]; do
+    local link_dir
+    link_dir="$(cd -P "$(dirname "${source_path}")" && pwd)"
+    source_path="$(readlink "${source_path}")"
+    [[ "${source_path}" != /* ]] && source_path="${link_dir}/${source_path}"
+  done
+
+  cd -P "$(dirname "${source_path}")" && pwd
+}
+
+FORCE=false
+TARGET_DIR=""
+
+while (($# > 0)); do
+  case "$1" in
+    --force)
+      FORCE=true
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "Error: unknown option '$1'" >&2
+      echo >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ -n "${TARGET_DIR}" ]]; then
+        echo "Error: target-dir was provided more than once." >&2
+        echo >&2
+        usage >&2
+        exit 2
+      fi
+      TARGET_DIR="$1"
+      ;;
+  esac
+  shift
+done
+
+SCRIPT_DIR="$(resolve_script_dir)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+SOURCE_SKILLS_DIR="${REPO_ROOT}/.agents/skills"
+SOURCE_DEVELOPER_AGENT="${REPO_ROOT}/.codex/agents/developer.toml"
+
+TARGET_DIR="${TARGET_DIR:-$(pwd)}"
+
+if [[ ! -d "${TARGET_DIR}" ]]; then
+  echo "Error: target directory does not exist: ${TARGET_DIR}" >&2
+  exit 1
+fi
+
+TARGET_DIR="$(cd "${TARGET_DIR}" && pwd)"
+
+if [[ ! -d "${SOURCE_SKILLS_DIR}" ]]; then
+  echo "Error: source skills directory not found: ${SOURCE_SKILLS_DIR}" >&2
+  exit 1
+fi
+
+if [[ ! -f "${SOURCE_DEVELOPER_AGENT}" ]]; then
+  echo "Error: source developer agent not found: ${SOURCE_DEVELOPER_AGENT}" >&2
+  exit 1
+fi
+
+TARGET_SKILLS_DIR="${TARGET_DIR}/.agents/skills"
+TARGET_CODEX_AGENTS_DIR="${TARGET_DIR}/.codex/agents"
+TARGET_DEVELOPER_AGENT="${TARGET_CODEX_AGENTS_DIR}/developer.toml"
+
+shopt -s nullglob
+SOURCE_SKILLS=("${SOURCE_SKILLS_DIR}"/*)
+shopt -u nullglob
+
+if [[ "${#SOURCE_SKILLS[@]}" -eq 0 ]]; then
+  echo "Error: no source skills found under ${SOURCE_SKILLS_DIR}" >&2
+  exit 1
+fi
+
+if [[ "${FORCE}" != "true" ]]; then
+  conflicts=()
+
+  for skill_dir in "${SOURCE_SKILLS[@]}"; do
+    [[ -d "${skill_dir}" ]] || continue
+    skill_name="$(basename "${skill_dir}")"
+    target_skill_dir="${TARGET_SKILLS_DIR}/${skill_name}"
+    if [[ -e "${target_skill_dir}" ]]; then
+      conflicts+=(".agents/skills/${skill_name}")
+    fi
+  done
+
+  if [[ -e "${TARGET_DEVELOPER_AGENT}" ]]; then
+    conflicts+=(".codex/agents/developer.toml")
+  fi
+
+  if [[ "${#conflicts[@]}" -gt 0 ]]; then
+    echo "Error: target already contains managed Codex config paths:" >&2
+    for path in "${conflicts[@]}"; do
+      echo "  - ${path}" >&2
+    done
+    echo "Re-run with --force to replace these managed paths." >&2
+    exit 1
+  fi
+fi
+
+mkdir -p "${TARGET_SKILLS_DIR}" "${TARGET_CODEX_AGENTS_DIR}"
+
+installed_count=0
+
+for skill_dir in "${SOURCE_SKILLS[@]}"; do
+  [[ -d "${skill_dir}" ]] || continue
+  skill_name="$(basename "${skill_dir}")"
+  target_skill_dir="${TARGET_SKILLS_DIR}/${skill_name}"
+
+  if [[ -e "${target_skill_dir}" && "${FORCE}" == "true" ]]; then
+    rm -rf "${target_skill_dir}"
+  fi
+
+  cp -R "${skill_dir}" "${TARGET_SKILLS_DIR}/"
+  installed_count=$((installed_count + 1))
+done
+
+if [[ -e "${TARGET_DEVELOPER_AGENT}" && "${FORCE}" == "true" ]]; then
+  rm -f "${TARGET_DEVELOPER_AGENT}"
+fi
+
+cp "${SOURCE_DEVELOPER_AGENT}" "${TARGET_DEVELOPER_AGENT}"
+
+echo "Installed codex-config into: ${TARGET_DIR}"
+echo "- synced skills: ${installed_count}"
+echo "- synced agent: .codex/agents/developer.toml"
+echo "- AGENTS.md: unchanged"
+echo
+echo "Next:"
+echo "  cd \"${TARGET_DIR}\""
+echo "  codex"
+echo '  $codex-workflow-guide'

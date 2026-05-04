@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -eq 0 ]; then
+  echo "Usage: codex-design \"idea...\"" >&2
+  exit 2
+fi
+
+idea="$*"
+
+codex "\$product-designer
+
+用户初始想法：
+$idea
+
+请按 \$product-designer 执行，生成 docs/plans/YYYY-MM-DD-HH-MM/ 下的 design 相关产物。"
