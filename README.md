@@ -17,7 +17,7 @@
 
 不需要运行 `codex plugin marketplace add ...`，也不需要修改 `~/.codex/config.toml`。
 
-所有 repo-local skills 都通过 `$skill-name` 显式触发；`developer` 同时是 Codex project-scoped custom subagent，定义在 `.codex/agents/developer.toml`。
+除写作辅助 `$writing-clearly-and-concisely` 可按场景隐式触发外，workflow 相关 repo-local skills 都通过 `$skill-name` 显式触发；`developer` 同时是 Codex project-scoped custom subagent，定义在 `.codex/agents/developer.toml`。
 
 ## 安装到目标 repo
 

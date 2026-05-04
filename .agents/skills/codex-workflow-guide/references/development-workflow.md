@@ -56,12 +56,14 @@ flowchart TD
 | `developer` + `$developer` | custom subagent + repo-local skill | 单个 task + 公共上下文 | 代码、测试、summary | `.codex/agents/developer.toml`、`.agents/skills/developer/SKILL.md` |
 | `$quality-reviewer` | repo-local skill | working tree diff、PR 或分支对比 | review findings、质量结论、确认后的上下文更新 | `.agents/skills/quality-reviewer/SKILL.md` |
 
-所有 repo-local skills 都是显式触发。每个 skill 的 `agents/openai.yaml` 设置：
+workflow 相关 repo-local skills 都是显式触发。每个 workflow skill 的 `agents/openai.yaml` 设置：
 
 ```yaml
 policy:
   allow_implicit_invocation: false
 ```
+
+例外：`$writing-clearly-and-concisely` 是写作辅助 skill，可按人类可读文本写作场景隐式触发。
 
 ## 3. Skills
 
