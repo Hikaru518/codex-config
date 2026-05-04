@@ -7,4 +7,4 @@ codex "\$quality-reviewer
 
 审查对象：$target
 
-请按 quality-reviewer skill 执行。先做事实性 review；只有 review 通过且我确认后，才更新项目上下文或合并 PR。"
+请按 \$quality-reviewer 执行。先做事实性 review；只有 review 通过且我确认后，才更新项目上下文或合并 PR。"

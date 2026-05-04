@@ -10,10 +10,11 @@
 
 ## Workflow Entrypoints
 
-- 使用 `product-designer` 将想法转成 design 文档。
-- 使用 `tech-designer` 将 design 文档转成 implementation plan 和 tasks.json。
-- 使用 `task-dispatcher` 按任务列表执行实现。
-- 使用 `quality-reviewer` 进行 review 和项目上下文更新。
+- 使用 `$product-designer` 将想法转成 design 文档。
+- 使用 `$tech-designer` 将 design 文档转成 implementation plan 和 tasks.json。
+- 使用 `$task-dispatcher` 按任务列表执行实现。
+- 使用 `$quality-reviewer` 进行 review 和项目上下文更新。
+- `developer` 是 Codex custom subagent，用于执行单个 bounded coding task。
 
 ## Planning Artifacts
 

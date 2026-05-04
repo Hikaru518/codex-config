@@ -20,11 +20,11 @@
 
 | 职责 | 新入口 |
 |---|---|
-| 需求澄清 / design 文档 | `product-designer` |
-| 技术方案 / 任务拆解 | `tech-designer` |
-| 任务调度 / progress 维护 | `task-dispatcher` |
-| 单任务实现 | `developer` |
-| review / 项目上下文更新 | `quality-reviewer` |
+| 需求澄清 / design 文档 | `$product-designer` |
+| 技术方案 / 任务拆解 | `$tech-designer` |
+| 任务调度 / progress 维护 | `$task-dispatcher` |
+| 单任务实现 | `$developer` |
+| review / 项目上下文更新 | `$quality-reviewer` |
 
 旧 OpenCode 文件中的拟人化名称只作为迁移来源存在，不作为新文件名、skill 名、脚本名、文档主入口名继续出现。
 
@@ -34,7 +34,7 @@
 2. 每个迁移文件尽量保留原文语言。
 3. 不做额外语言润色。
 4. 只在确实需要适配 Codex 时改写，例如：
-   - OpenCode 的 `mode: primary` / `mode: subagent`
+   - OpenCode 的 agent mode frontmatter
    - OpenCode 的 permission frontmatter
    - OpenCode 专用工具名
    - OpenCode 专用 agent 调用语法
@@ -57,52 +57,65 @@
 
 优先做 per-repo 配置包。
 
-实现方式采用 repo 内的本地插件索引（local plugin registry）：
+实现方式采用 repo 内的 `.agents/skills`：
 
 - workflow 源文件保存在当前 repo。
-- Codex 通过本地插件索引发现 repo 内插件。
+- Codex 从当前目录向 repo root 扫描 `.agents/skills`。
 - 这不是发布到 Codex 官方 marketplace。
 - 不会自动上传、公开或给别人安装。
 
-如果当前 Codex 版本无法完全做到 repo 自动发现，则提供一个安装/初始化脚本，把这个 repo 的本地插件索引注册到用户 Codex 配置中。即使使用 per-user 注册，源文件仍然保留在 repo 内，后续更新通过 repo 管理。
+Codex 官方文档 [Agent Skills](https://developers.openai.com/codex/skills) 说明，direct skill folders 适合 local authoring 和 repo-scoped workflows；plugins 适合跨 repo 分发。第一版不使用 plugin registry 作为默认路径，也不修改用户级 Codex 配置。
 
 ## 目标目录结构
 
 ```text
 AGENTS.md
 .agents/
-  plugins/
-    marketplace.json
-plugins/
-  codex-dev-workflow/
-    .codex-plugin/
-      plugin.json
-    skills/
-      product-designer/
-        SKILL.md
-        references/
-      tech-designer/
-        SKILL.md
-        references/
-      task-dispatcher/
-        SKILL.md
-        references/
-      developer/
-        SKILL.md
-      quality-reviewer/
-        SKILL.md
-      code-review/
-        SKILL.md
-      project-summary/
-        SKILL.md
-      json-lint/
-        SKILL.md
-      test-driven-development/
-        SKILL.md
-      systematic-debugging/
-        SKILL.md
-      writing-clearly-and-concisely/
-        SKILL.md
+  skills/
+    product-designer/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    tech-designer/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    task-dispatcher/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    developer/
+      SKILL.md
+      agents/openai.yaml
+    quality-reviewer/
+      SKILL.md
+      agents/openai.yaml
+    code-review/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    project-summary/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    json-lint/
+      SKILL.md
+      agents/openai.yaml
+    test-driven-development/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    systematic-debugging/
+      SKILL.md
+      agents/openai.yaml
+      references/
+    writing-clearly-and-concisely/
+      SKILL.md
+      agents/openai.yaml
+      references/
+.codex/
+  agents/
+    developer.toml
 bin/
   codex-design
   codex-tech-design
@@ -110,42 +123,26 @@ bin/
   codex-review
 ```
 
-## 本地插件索引设计
+## Repo-local Skills 设计
 
-`.agents/plugins/marketplace.json` 是本地插件索引，不是公开 marketplace 发布配置。
+`.agents/skills` 是 repo 内的 skills 目录，不是公开 marketplace 发布配置。
 
-建议内容：
+每个 skill 目录包含：
 
-```json
-{
-  "name": "codex-dev-workflow-local",
-  "interface": {
-    "displayName": "Codex Dev Workflow Local"
-  },
-  "plugins": [
-    {
-      "name": "codex-dev-workflow",
-      "source": {
-        "source": "local",
-        "path": "./plugins/codex-dev-workflow"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    }
-  ]
-}
+```text
+<skill-name>/
+  SKILL.md
+  agents/openai.yaml
+  references/
 ```
 
 说明：
 
-- `source.local` 表示插件来自当前 repo 的本地路径。
-- `AVAILABLE` 表示它可以被本机 Codex 安装/启用。
-- 如果后续希望初始化脚本一键启用，可以评估是否改成 `INSTALLED_BY_DEFAULT`，但第一版先保持显式启用。
-
-`plugins/codex-dev-workflow/.codex-plugin/plugin.json` 只描述本地插件本身，不包含发布信息。
+- 目录名与 frontmatter `name` 保持一致。
+- `SKILL.md` 必须包含 `name` 和 `description`。
+- 所有 repo-local skills 通过 `$skill` 显式触发。
+- `agents/openai.yaml` 中设置 `policy.allow_implicit_invocation: false`。
+- 如果未来需要跨 repo 分发，可以重新引入 plugin packaging。
 
 ## Skill 迁移规则
 
@@ -165,10 +162,9 @@ bin/
 
 迁移时删除或改写以下 OpenCode 专用内容：
 
-- `mode: primary`
-- `mode: subagent`
+- agent mode frontmatter
 - `permission:`
-- `skill({ name: "..." })`
+- OpenCode skill invocation expression
 - `todowrite`
 - `todoread`
 - `question`
@@ -182,12 +178,27 @@ bin/
 | OpenCode 内容 | Codex 迁移方式 |
 |---|---|
 | primary agent | entry skill |
-| subagent wrapper | `developer` skill + worker prompt |
+| subagent wrapper | `developer` custom subagent + `$developer` skill + developer prompt |
 | `todowrite` / `todoread` | `tasks.json`、`progress.md`、普通 checklist |
 | `question` | 交互式直接询问用户 |
 | `lsp` | 项目已有 typecheck / lint / test 命令 |
 | permission frontmatter | Codex sandbox / approval / 用户确认 |
 | `@...` 调用 | 明确写成 Codex subagent delegation 行为 |
+
+## Codex Custom Subagent
+
+OpenCode 中的短生命周期执行者迁移为 Codex project-scoped custom agent：
+
+```text
+.codex/agents/developer.toml
+```
+
+说明：
+
+- `developer` 是 custom subagent，不是旧的拟人化 agent。
+- `developer` subagent 执行单个 bounded coding task。
+- task-dispatcher 派发时，prompt 必须显式包含 `$developer`。
+- `developer.toml` 不设置 model / sandbox override，默认继承父 session。
 
 ## Entry Skills
 
@@ -282,15 +293,15 @@ Codex 适配要求：
 Codex 适配要求：
 
 - 默认串行执行。
-- 每个任务派发一个全新 worker subagent。
-- worker subagent 必须只执行一个 task。
+- 每个任务派发一个全新 `developer` custom subagent。
+- developer subagent 必须只执行一个 task。
 - 调度者不直接写业务代码。
 - 调度者负责验证、更新 `progress.md` 和 commit。
 - 失败任务最多重试 3 次。
 - 3 次失败后暂停，向用户报告 blocker。
 - 创建 PR 前必须询问用户。
 
-worker prompt 必须包含：
+developer prompt 必须包含：
 
 - task id
 - task description
@@ -400,10 +411,11 @@ Codex 适配要求：
 
 ## Workflow Entrypoints
 
-- 使用 `product-designer` 将想法转成 design 文档。
-- 使用 `tech-designer` 将 design 文档转成 implementation plan 和 tasks.json。
-- 使用 `task-dispatcher` 按任务列表执行实现。
-- 使用 `quality-reviewer` 进行 review 和项目上下文更新。
+- 使用 `$product-designer` 将想法转成 design 文档。
+- 使用 `$tech-designer` 将 design 文档转成 implementation plan 和 tasks.json。
+- 使用 `$task-dispatcher` 按任务列表执行实现。
+- 使用 `$quality-reviewer` 进行 review 和项目上下文更新。
+- `developer` 是 Codex custom subagent，用于执行单个 bounded coding task。
 
 ## Planning Artifacts
 
@@ -468,18 +480,18 @@ Codex 适配要求：
 - `.gitignore` 包含 `tmp/`。
 - `git status --short` 中不再显示 `tmp/`。
 
-### Phase 1：创建本地插件索引和插件骨架
+### Phase 1：创建 repo-local skills 目录
 
-1. 创建 `.agents/plugins/marketplace.json`。
-2. 创建 `plugins/codex-dev-workflow/.codex-plugin/plugin.json`。
-3. 创建 `plugins/codex-dev-workflow/skills/`。
+1. 创建 `.agents/skills/`。
+2. 将 workflow skills 放在 `.agents/skills/<skill-name>/SKILL.md`。
+3. 不创建 plugin registry。
 4. 暂不写入实际 workflow 逻辑。
 
 验收：
 
-- JSON 文件可 parse。
-- local plugin registry 指向 repo 内插件路径。
-- 不包含远程发布配置。
+- `.agents/skills` 存在。
+- 不包含 `.agents/plugins/marketplace.json`。
+- 不包含 `plugins/codex-dev-workflow/.codex-plugin/plugin.json`。
 
 ### Phase 2：迁移 capability skills
 
@@ -529,20 +541,22 @@ Codex 适配要求：
 - 不再暴露旧拟人化入口名。
 - 每个 entry skill 都能独立说明何时触发、产出什么、何时停止。
 
-### Phase 4：实现 task-dispatcher 的 worker 派发规范
+### Phase 4：实现 task-dispatcher 的 developer subagent 派发规范
 
-1. 在 `task-dispatcher/references/worker-prompt-template.md` 中定义 worker prompt。
+1. 在 `task-dispatcher/references/developer-prompt-template.md` 中定义 developer prompt。
 2. 在 `developer/SKILL.md` 中定义单任务执行边界。
-3. 在 `task-dispatcher/SKILL.md` 中明确：
-   - 每个 task 一个 worker subagent。
-   - worker 只做一个 task。
+3. 在 `.codex/agents/developer.toml` 中定义 Codex custom subagent。
+4. 在 `task-dispatcher/SKILL.md` 中明确：
+   - 每个 task 一个 `developer` custom subagent。
+   - developer subagent 只做一个 task。
+   - prompt 必须显式包含 `$developer`。
    - 调度者负责验证和 commit。
    - 失败最多重试 3 次。
 
 验收：
 
-- worker prompt 包含足够上下文。
-- worker 被禁止 commit。
+- developer prompt 包含足够上下文。
+- developer subagent 被禁止 commit。
 - task-dispatcher 被禁止直接写业务代码。
 
 ### Phase 5：新增 AGENTS.md
@@ -575,19 +589,28 @@ Codex 适配要求：
 
 编写简短安装说明。
 
-推荐命令：
+使用方式：
 
 ```bash
-codex plugin marketplace add /path/to/codex-config
+cd /path/to/target-repo
+codex
 ```
 
-如果需要自动启用插件，再补一个显式 init 脚本。该脚本必须说明它会修改用户 Codex 配置。
+目标 repo 需要包含：
+
+```text
+.agents/skills/
+.codex/agents/developer.toml
+AGENTS.md
+```
+
+如果安装到其他 repo，第一版手动复制 `.agents/skills` 和 `.codex/agents/developer.toml`，然后手动合并 `AGENTS.md` 中的 workflow 入口规则。不要直接覆盖目标 repo 现有的 `AGENTS.md`。
 
 验收：
 
-- 用户知道这是本地插件索引。
-- 用户知道不会发布到官方 marketplace。
-- 用户知道是否修改了 per-user Codex 配置。
+- 用户知道 skills 跟随 repo 版本管理。
+- 用户知道不需要注册 marketplace。
+- 用户知道不会修改 per-user Codex 配置。
 
 ### Phase 8：试运行
 
@@ -600,7 +623,7 @@ idea
  -> tech-designer
  -> implementation-plan.md + tasks.json
  -> task-dispatcher
- -> worker tasks
+ -> developer subagent tasks
  -> progress.md + commits
  -> quality-reviewer
 ```
@@ -612,7 +635,7 @@ idea
 - 是否误触发 headless 假设。
 - `tasks.json` 是否稳定可 parse。
 - `progress.md` 是否足够恢复执行。
-- worker 是否越权规划、commit 或扩大范围。
+- developer subagent 是否越权规划、commit 或扩大范围。
 - review 是否只输出事实性发现。
 
 ## 全局验收标准
@@ -625,9 +648,10 @@ idea
 4. 新产物不依赖 OpenCode 专用工具。
 5. 不迁移 headless。
 6. workflow 源文件保存在 repo 内。
-7. 本地插件索引不会发布到 Codex 官方 marketplace。
-8. 文档语言和原文语言保持一致，不做额外润色。
-9. `tmp/` 被 git 忽略。
+7. 不使用 plugin registry 作为默认路径。
+8. 所有 repo-local skills 设置 `allow_implicit_invocation: false`。
+9. 文档语言和原文语言保持一致，不做额外润色。
+10. `tmp/` 被 git 忽略。
 
 ## 暂不处理
 
@@ -637,7 +661,6 @@ idea
 - 远程 marketplace。
 - CI/headless workflow。
 - GitHub Action。
-- 自定义 Codex agent 文件。
 - 自动合并 PR。
 - 自动修改用户全局 Codex 配置，除非用户明确要求。
 

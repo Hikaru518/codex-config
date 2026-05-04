@@ -13,4 +13,4 @@ codex "\$product-designer
 用户初始想法：
 $idea
 
-请按 product-designer skill 执行，生成 docs/plans/YYYY-MM-DD-HH-MM/ 下的 design 相关产物。"
+请按 \$product-designer 执行，生成 docs/plans/YYYY-MM-DD-HH-MM/ 下的 design 相关产物。"
